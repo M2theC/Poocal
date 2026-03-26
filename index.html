@@ -477,7 +477,7 @@
   /* Persoon rij */
   .person-row {
     display: grid;
-    grid-template-columns: 44px 1fr auto auto auto;
+    grid-template-columns: 44px 1fr auto auto auto auto;
     align-items: center;
     gap: 12px;
     padding: 8px 6px;
@@ -703,7 +703,7 @@
   <main class="main">
 
     <div class="add-form" id="addForm">
-      <div class="form-title" id="formTitle" data-nl="// NIEUWE PERSOON" data-en="// NEW PERSON">// NIEUWE PERSOON</div>
+      <div class="form-title" id="formTitle">// NIEUWE PERSOON</div>
       <div class="form-grid">
         <div class="form-group">
           <label class="lcd-label" id="fNaamLbl" data-nl="NAAM" data-en="NAME">NAAM</label>
@@ -753,7 +753,7 @@
       </div>
       <div class="form-actions">
         <button class="pix-btn-sm ghost" onclick="toggleForm()" id="btnCancel" data-nl="ANNULEREN" data-en="CANCEL">ANNULEREN</button>
-        <button class="pix-btn-sm" onclick="voegToe()" id="saveBtn" data-nl="OPSLAAN" data-en="SAVE">OPSLAAN</button>
+        <button class="pix-btn-sm" onclick="opslaanOfBewerken()" id="saveBtn" data-nl="OPSLAAN" data-en="SAVE">OPSLAAN</button>
       </div>
       <div id="formMsg"></div>
     </div>
@@ -903,6 +903,7 @@ function copyId() {
 // ── DATA ──────────────────────────────────────────────────
 let cachedData = null;
 let huidigeFoto = null;
+let editId = null;
 
 async function laadVerjaardagen() {
   const { data, error } = await sb.from('verjaardagen').select('*').order('maand').order('dag');
@@ -958,6 +959,7 @@ function renderLijst(mensen) {
           ${memoriam?`<div class="p-meta" style="font-style:italic;opacity:0.8">${memoriam}</div>`:''}
         </div>
         ${foto}
+        <button class="icon-btn" onclick="openEdit(${JSON.stringify(p).replace(/'/g,'\\'')})" title="edit">✎</button>
         <button class="icon-btn" onclick="toggleOverleden('${p.id}',${p.overleden})" title="${p.overleden?t('deceased'):t('alive')}">${p.overleden?'♺':'✝'}</button>
         <button class="icon-btn del" onclick="verwijder('${p.id}')" title="X">✕</button>
       </div>`;
@@ -965,9 +967,83 @@ function renderLijst(mensen) {
     html += '</div>';
   });
   document.getElementById('lijst').innerHTML = html;
+
+  // Event delegation voor edit knoppen - geen quoting problemen
+  document.getElementById('lijst').querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEditById(btn.dataset.id));
+  });
 }
 
 // ── FORMULIER ─────────────────────────────────────────────
+function openEditById(id) {
+  const p = cachedData.find(x => x.id === id);
+  if (p) openEdit(p);
+}
+
+function openEdit(p) {
+  editId = p.id;
+  document.getElementById('f-naam').value = p.naam || '';
+  document.getElementById('f-datum').value = (p.dag ? String(p.dag).padStart(2,'0') : '') + '-' + (p.maand ? String(p.maand).padStart(2,'0') : '');
+  document.getElementById('f-jaar').value = p.jaar || '';
+  document.getElementById('f-relatie').value = p.relatie || '';
+  document.getElementById('f-overlijdensjaar').value = p.overlijdensdatum_jaar || '';
+  document.getElementById('f-memoriam').value = p.in_memoriam || '';
+  document.getElementById('f-foto-tonen').checked = p.foto_tonen !== false;
+  document.getElementById('f-overleden').checked = p.overleden || false;
+  document.getElementById('overledenVelden').style.display = p.overleden ? 'block' : 'none';
+  document.getElementById('formTitle').textContent = '// BEWERKEN: ' + p.naam.toUpperCase();
+  document.getElementById('saveBtn').textContent = LANG === 'nl' ? 'OPSLAAN' : 'SAVE';
+  const form = document.getElementById('addForm');
+  form.classList.add('open');
+  document.getElementById('f-naam').focus();
+}
+
+function opslaanOfBewerken() {
+  if (editId) bewerkPersoon();
+  else voegToe();
+}
+
+async function bewerkPersoon() {
+  const naam  = document.getElementById('f-naam').value.trim();
+  const datum = document.getElementById('f-datum').value.trim();
+  const jaar  = parseInt(document.getElementById('f-jaar').value)||null;
+  const rel   = document.getElementById('f-relatie').value.trim();
+  const overl = document.getElementById('f-overleden').checked;
+  const fotoTonen = document.getElementById('f-foto-tonen').checked;
+  const overlJaar = parseInt(document.getElementById('f-overlijdensjaar').value)||null;
+  const memoriam  = document.getElementById('f-memoriam').value.trim();
+
+  if (!naam) return formMsg(t('errFill'));
+  if (!/^\d{2}-\d{2}$/.test(datum)) return formMsg(t('errDate'));
+  const dag = parseInt(datum.substring(0,2)), maand = parseInt(datum.substring(3,5));
+  if (dag<1||dag>31||maand<1||maand>12) return formMsg(t('errInvalid'));
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled=true; btn.textContent=t('saving');
+
+  const { data: { user } } = await sb.auth.getUser();
+  let fotoUrl = null;
+  if (huidigeFoto) {
+    const ext=huidigeFoto.name.split('.').pop();
+    const pad=`${user.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from('fotos').upload(pad, huidigeFoto);
+    if (!upErr) { const { data: u } = sb.storage.from('fotos').getPublicUrl(pad); fotoUrl=u.publicUrl; }
+  }
+
+  const updates = {
+    naam, dag, maand, jaar, relatie: rel||null,
+    overleden: overl, foto_tonen: fotoTonen,
+    overlijdensdatum_jaar: overlJaar, in_memoriam: memoriam||null
+  };
+  if (fotoUrl) updates.foto_url = fotoUrl;
+
+  const { error } = await sb.from('verjaardagen').update(updates).eq('id', editId);
+
+  btn.disabled=false; btn.textContent=LANG==='nl'?'OPSLAAN':'SAVE';
+  if (error) return formMsg(t('errGeneral')+': '+error.message);
+  toggleForm(); laadVerjaardagen();
+}
+
 function toggleForm() {
   const f = document.getElementById('addForm');
   if (f.classList.toggle('open')) document.getElementById('f-naam').focus();
@@ -980,6 +1056,8 @@ function toggleOverledenVelden() {
 }
 
 function resetForm() {
+  editId = null;
+  document.getElementById('formTitle').textContent = LANG==='nl' ? '// NIEUWE PERSOON' : '// NEW PERSON';
   ['f-naam','f-datum','f-jaar','f-relatie','f-overlijdensjaar','f-memoriam'].forEach(id => document.getElementById(id).value='');
   document.getElementById('f-overleden').checked=false;
   document.getElementById('f-foto-tonen').checked=true;
