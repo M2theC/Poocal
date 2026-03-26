@@ -728,8 +728,26 @@
         </div>
         <div class="form-group full">
           <div class="check-row">
-            <input type="checkbox" id="f-overleden">
+            <input type="checkbox" id="f-foto-tonen" checked>
+            <label for="f-foto-tonen" id="fFotoTonenLbl" data-nl="FOTO WEERGEVEN OP SCHERM" data-en="SHOW PHOTO ON SCREEN">FOTO WEERGEVEN OP SCHERM</label>
+          </div>
+        </div>
+        <div class="form-group full">
+          <div class="check-row">
+            <input type="checkbox" id="f-overleden" onchange="toggleOverledenVelden()">
             <label for="f-overleden" id="fOverledenLbl" data-nl="OVERLEDEN — toon ✝ op het scherm" data-en="DECEASED — show ✝ on screen">OVERLEDEN — toon ✝ op het scherm</label>
+          </div>
+        </div>
+        <div id="overledenVelden" style="display:none;grid-column:1/-1">
+          <div class="form-grid" style="margin-top:8px">
+            <div class="form-group">
+              <label class="lcd-label" id="fOverlJaarLbl" data-nl="JAAR VAN OVERLIJDEN" data-en="YEAR OF DEATH">JAAR VAN OVERLIJDEN</label>
+              <input class="lcd-input" type="text" id="f-overlijdensjaar" placeholder="2024" maxlength="4" style="margin-bottom:0">
+            </div>
+            <div class="form-group">
+              <label class="lcd-label" id="fMemoriamLbl" data-nl="IN MEMORIAM TEKST (OPT.)" data-en="IN MEMORIAM TEXT (OPT.)">IN MEMORIAM TEKST (OPT.)</label>
+              <input class="lcd-input" type="text" id="f-memoriam" placeholder="In memoriam" style="margin-bottom:0">
+            </div>
           </div>
         </div>
       </div>
@@ -918,17 +936,26 @@ function renderLijst(mensen) {
     perMaand[m].forEach(p => {
       const isVandaag = m===dm && p.dag===dd;
       const leeftijd = p.jaar ? (dj - p.jaar - (m>dm||(m===dm&&p.dag>dd)?1:0)) : null;
-      const foto = p.foto_url
+      const fotoTonen = p.foto_tonen !== false;
+      const foto = (p.foto_url && fotoTonen)
         ? `<img class="photo-thumb" src="${p.foto_url}" alt="">`
         : `<div class="photo-placeholder" onclick="uploadFotoBestaand('${p.id}')" title="+">+</div>`;
-      const metaParts = [p.relatie, leeftijd!==null ? leeftijd+(LANG==='nl'?' jr':' yr') : null].filter(Boolean);
+      // Levensjaren: 1942 - 2024
+      let levensjaren = '';
+      if (p.jaar && p.overlijdensdatum_jaar) levensjaren = p.jaar + ' - ' + p.overlijdensdatum_jaar;
+      else if (p.jaar && p.overleden) levensjaren = p.jaar + ' - ?';
+      else if (leeftijd !== null && !p.overleden) levensjaren = leeftijd+(LANG==='nl'?' jr':' yr');
+
+      const metaParts = [p.relatie, levensjaren||null].filter(Boolean);
       const meta = metaParts.join(' // ');
+      const memoriam = p.in_memoriam || (p.overleden ? (LANG==='nl'?'In memoriam':'In memoriam') : null);
 
       html += `<div class="person-row${p.overleden?' deceased':''}">
         <span class="day-num">${String(p.dag).padStart(2,'0')}</span>
         <div>
           <div class="p-name">${p.overleden?'✝ ':''}${p.naam}${isVandaag?` <span class="today-tag">${t('today')}</span>`:''}</div>
           ${meta?`<div class="p-meta">${meta}</div>`:''}
+          ${memoriam?`<div class="p-meta" style="font-style:italic;opacity:0.8">${memoriam}</div>`:''}
         </div>
         ${foto}
         <button class="icon-btn" onclick="toggleOverleden('${p.id}',${p.overleden})" title="${p.overleden?t('deceased'):t('alive')}">${p.overleden?'♺':'✝'}</button>
@@ -947,9 +974,16 @@ function toggleForm() {
   else resetForm();
 }
 
+function toggleOverledenVelden() {
+  const checked = document.getElementById('f-overleden').checked;
+  document.getElementById('overledenVelden').style.display = checked ? 'block' : 'none';
+}
+
 function resetForm() {
-  ['f-naam','f-datum','f-jaar','f-relatie'].forEach(id => document.getElementById(id).value='');
+  ['f-naam','f-datum','f-jaar','f-relatie','f-overlijdensjaar','f-memoriam'].forEach(id => document.getElementById(id).value='');
   document.getElementById('f-overleden').checked=false;
+  document.getElementById('f-foto-tonen').checked=true;
+  document.getElementById('overledenVelden').style.display='none';
   document.getElementById('f-foto').value='';
   document.getElementById('foto-preview').style.display='none';
   document.getElementById('formMsg').innerHTML='';
@@ -974,6 +1008,9 @@ async function voegToe() {
   const jaar  = parseInt(document.getElementById('f-jaar').value)||null;
   const rel   = document.getElementById('f-relatie').value.trim();
   const overl = document.getElementById('f-overleden').checked;
+  const fotoTonen = document.getElementById('f-foto-tonen').checked;
+  const overlJaar = parseInt(document.getElementById('f-overlijdensjaar').value)||null;
+  const memoriam = document.getElementById('f-memoriam').value.trim();
 
   if (!naam||!datum) return formMsg(t('errFill'));
   if (!/^\d{2}-\d{2}$/.test(datum)) return formMsg(t('errDate'));
@@ -993,7 +1030,8 @@ async function voegToe() {
   }
 
   const { error } = await sb.from('verjaardagen').insert({
-    user_id: user.id, naam, dag, maand, jaar, relatie: rel||null, overleden: overl, foto_url: fotoUrl
+    user_id: user.id, naam, dag, maand, jaar, relatie: rel||null, overleden: overl, foto_url: fotoUrl,
+    foto_tonen: fotoTonen, overlijdensdatum_jaar: overlJaar, in_memoriam: memoriam||null
   });
 
   btn.disabled=false; btn.textContent=LANG==='nl'?'OPSLAAN':'SAVE';
