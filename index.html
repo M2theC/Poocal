@@ -941,7 +941,7 @@ function renderLijst(mensen) {
       const fotoTonen = p.foto_tonen !== false;
       const foto = (p.foto_url && fotoTonen)
         ? `<img class="photo-thumb" src="${p.foto_url}" alt="">`
-        : `<div class="photo-placeholder" onclick="uploadFotoBestaand('${p.id}')" title="+">+</div>`;
+        : `<div class="photo-placeholder foto-upload-btn" data-id="${p.id}" title="+">+</div>`;
       // Levensjaren: 1942 - 2024
       let levensjaren = '';
       if (p.jaar && p.overlijdensdatum_jaar) levensjaren = p.jaar + ' - ' + p.overlijdensdatum_jaar;
@@ -960,9 +960,9 @@ function renderLijst(mensen) {
           ${memoriam?`<div class="p-meta" style="font-style:italic;opacity:0.8">${memoriam}</div>`:''}
         </div>
         ${foto}
-        <button class="icon-btn" onclick="openEdit(${JSON.stringify(p).replace(/'/g,'\\'')})" title="edit">✎</button>
-        <button class="icon-btn" onclick="toggleOverleden('${p.id}',${p.overleden})" title="${p.overleden?t('deceased'):t('alive')}">${p.overleden?'♺':'✝'}</button>
-        <button class="icon-btn del" onclick="verwijder('${p.id}')" title="X">✕</button>
+        <button class="icon-btn edit-btn" data-id="${p.id}" title="edit">✎</button>
+        <button class="icon-btn toggle-btn" data-id="${p.id}" data-deceased="${p.overleden}" title="${p.overleden?t('deceased'):t('alive')}">${p.overleden?'♺':'✝'}</button>
+        <button class="icon-btn del del-btn" data-id="${p.id}" title="X">✕</button>
       </div>`;
     });
     html += '</div>';
@@ -972,6 +972,15 @@ function renderLijst(mensen) {
   // Event delegation voor edit knoppen - geen quoting problemen
   document.getElementById('lijst').querySelectorAll('.edit-btn').forEach(btn => {
     btn.addEventListener('click', () => openEditById(btn.dataset.id));
+  });
+  document.getElementById('lijst').querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => toggleOverleden(btn.dataset.id, btn.dataset.deceased === 'true'));
+  });
+  document.getElementById('lijst').querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', () => verwijder(btn.dataset.id));
+  });
+  document.getElementById('lijst').querySelectorAll('.foto-upload-btn').forEach(btn => {
+    btn.addEventListener('click', () => uploadFotoBestaand(btn.dataset.id));
   });
 }
 
