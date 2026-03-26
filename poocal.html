@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poocal</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --lcd: #b8c890;
+    --lcd-dark: #3a4a20;
+    --lcd-mid: #7a9040;
+    --lcd-light: #d0d8a8;
+    --lcd-bg: #c8d098;
+    --pixel: #2a3818;
+    --paper: #f0ede0;
+    --ink: #1a1a10;
+    --muted: #6a7050;
+    --border: #a0a878;
+    --accent: #5a3a10;
+    --error-bg: #f0e0c8;
+    --error: #7a3010;
+    --success-bg: #d8e8c0;
+    --success: #3a5820;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── PIXEL FONT ── */
+  .vt { font-family: 'VT323', monospace; }
+  .mono { font-family: 'Share Tech Mono', monospace; }
+
+  /* ── PIXEL DECORATIE ── */
+  .pixel-border {
+    border: 3px solid var(--pixel);
+    box-shadow: 4px 4px 0 var(--lcd-mid), 2px 2px 0 var(--pixel);
+  }
+
+  /* ════════════════════════════════════
+     AUTH SCHERM
+  ════════════════════════════════════ */
+  .auth-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(160,168,120,0.08) 3px, rgba(160,168,120,0.08) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(160,168,120,0.08) 3px, rgba(160,168,120,0.08) 4px);
+  }
+
+  .auth-device {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /* Palm Pilot behuizing */
+  .palm-shell {
+    background: #d8d0c0;
+    border-radius: 16px 16px 40px 40px;
+    padding: 16px 16px 32px;
+    border: 2px solid #a09880;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.15), 3px 6px 0 #908870;
+  }
+
+  /* LCD scherm */
+  .palm-screen {
+    background: var(--lcd-bg);
+    border-radius: 6px;
+    border: 3px solid #707858;
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.25), inset 2px 2px 6px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* LCD scanline effect */
+  .palm-screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 3px);
+    pointer-events: none;
+  }
+
+  /* Logo bovenaan scherm */
+  .screen-logo {
+    text-align: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--lcd-mid);
+  }
+
+  .logo-title {
+    font-family: 'VT323', monospace;
+    font-size: 52px;
+    color: var(--pixel);
+    line-height: 1;
+    letter-spacing: 4px;
+  }
+
+  .logo-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--lcd-mid);
+    letter-spacing: 3px;
+    margin-top: 2px;
+  }
+
+  /* Pixel poop icon klein */
+  .poop-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    margin-right: 6px;
+    margin-bottom: 4px;
+  }
+
+  /* Taalschakelaar op scherm */
+  .lang-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .lang-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    background: none;
+    border: 1px solid var(--lcd-mid);
+    color: var(--lcd-mid);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.1s;
+  }
+
+  .lang-btn.active {
+    background: var(--pixel);
+    color: var(--lcd-light);
+    border-color: var(--pixel);
+  }
+
+  /* Tabs */
+  .screen-tabs {
+    display: flex;
+    margin-bottom: 14px;
+    border-bottom: 2px solid var(--lcd-mid);
+  }
+
+  .screen-tab {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 5px 12px;
+    background: none;
+    border: none;
+    color: var(--lcd-mid);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.1s;
+  }
+
+  .screen-tab.active {
+    color: var(--pixel);
+    border-bottom-color: var(--pixel);
+    font-weight: bold;
+  }
+
+  /* Form velden — LCD stijl */
+  .lcd-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--lcd-mid);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  .lcd-input {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    width: 100%;
+    padding: 6px 8px;
+    background: var(--lcd-light);
+    border: 2px solid var(--lcd-mid);
+    border-radius: 0;
+    color: var(--pixel);
+    outline: none;
+    transition: border-color 0.1s;
+    margin-bottom: 10px;
+  }
+
+  .lcd-input:focus { border-color: var(--pixel); background: #dce4b8; }
+
+  /* Pixelknop */
+  .pixel-btn {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    letter-spacing: 2px;
+    width: 100%;
+    padding: 6px 0;
+    background: var(--pixel);
+    color: var(--lcd-light);
+    border: none;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.1s;
+    box-shadow: 3px 3px 0 var(--lcd-mid);
+    margin-top: 4px;
+  }
+
+  .pixel-btn:hover { background: #3a5020; transform: translate(1px,1px); box-shadow: 2px 2px 0 var(--lcd-mid); }
+  .pixel-btn:active { transform: translate(3px,3px); box-shadow: none; }
+  .pixel-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .lcd-msg {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 6px 8px;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .lcd-msg.error { background: #d8c8a0; color: var(--error); border-left: 3px solid var(--error); }
+  .lcd-msg.success { background: var(--success-bg); color: var(--success); border-left: 3px solid var(--success); }
+
+  /* Palm knoppen onderaan */
+  .palm-buttons {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 12px 0;
+  }
+
+  .palm-btn {
+    width: 48px;
+    height: 14px;
+    background: #b8b0a0;
+    border-radius: 3px;
+    border: 1px solid #908878;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.3), 0 2px 0 #807868;
+  }
+
+  .palm-stylus-area {
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  .palm-stylus-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    color: #908878;
+    letter-spacing: 2px;
+  }
+
+  /* ════════════════════════════════════
+     APP SCHERM
+  ════════════════════════════════════ */
+  #app { display: none; }
+
+  .app-header {
+    background: var(--lcd-bg);
+    border-bottom: 3px solid var(--pixel);
+    padding: 0;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--lcd-mid);
+    gap: 12px;
+  }
+
+  .header-logo {
+    font-family: 'VT323', monospace;
+    font-size: 36px;
+    color: var(--pixel);
+    letter-spacing: 3px;
+    line-height: 1;
+  }
+
+  .header-logo span {
+    font-size: 20px;
+    opacity: 0.6;
+    margin-left: 4px;
+  }
+
+  .header-lang {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .h-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    background: none;
+    border: 1px solid var(--lcd-mid);
+    color: var(--pixel);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+
+  .h-btn:hover { background: var(--pixel); color: var(--lcd-light); }
+
+  .h-btn-primary {
+    background: var(--pixel);
+    color: var(--lcd-light);
+    border-color: var(--pixel);
+    box-shadow: 2px 2px 0 var(--lcd-mid);
+  }
+
+  .h-btn-primary:hover { background: #3a5020; }
+
+  .user-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--lcd-mid);
+    letter-spacing: 1px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ID balk */
+  .id-strip {
+    background: var(--pixel);
+    color: #a8c880;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 6px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .id-strip span { opacity: 0.6; white-space: nowrap; }
+  .id-strip strong { word-break: break-all; letter-spacing: 0.5px; }
+
+  .copy-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    padding: 2px 8px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #a8c880;
+    cursor: pointer;
+    white-space: nowrap;
+    letter-spacing: 1px;
+  }
+
+  .copy-btn:hover { background: rgba(255,255,255,0.2); }
+
+  /* Hoofdinhoud */
+  .main { max-width: 860px; margin: 0 auto; padding: 24px; }
+
+  /* Formulier */
+  .add-form {
+    background: var(--lcd-bg);
+    border: 3px solid var(--pixel);
+    box-shadow: 4px 4px 0 var(--lcd-mid);
+    padding: 20px;
+    margin-bottom: 24px;
+    display: none;
+  }
+
+  .add-form.open { display: block; animation: pixelIn 0.15s steps(3) forwards; }
+
+  @keyframes pixelIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .form-title {
+    font-family: 'VT323', monospace;
+    font-size: 24px;
+    color: var(--pixel);
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid var(--lcd-mid);
+    padding-bottom: 6px;
+  }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  .check-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .check-row input { width: 14px; height: 14px; accent-color: var(--pixel); cursor: pointer; }
+  .check-row label { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--pixel); cursor: pointer; letter-spacing: 0.5px; }
+
+  .form-actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+
+  .pix-btn-sm {
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    letter-spacing: 1px;
+    padding: 4px 16px;
+    background: var(--pixel);
+    color: var(--lcd-light);
+    border: none;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--lcd-mid);
+    transition: all 0.1s;
+  }
+
+  .pix-btn-sm:hover { transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--lcd-mid); }
+  .pix-btn-sm.ghost { background: transparent; color: var(--pixel); border: 1px solid var(--lcd-mid); box-shadow: none; }
+  .pix-btn-sm.ghost:hover { background: var(--lcd-light); transform: none; }
+
+  /* Maand secties */
+  .month-section { margin-bottom: 28px; }
+
+  .month-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid var(--pixel);
+  }
+
+  .month-name {
+    font-family: 'VT323', monospace;
+    font-size: 28px;
+    color: var(--pixel);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .month-count {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .this-month-dot {
+    width: 8px; height: 8px;
+    background: var(--lcd-mid);
+    display: inline-block;
+    border-radius: 0;
+    margin-left: 6px;
+    vertical-align: middle;
+    animation: blink 1s steps(1) infinite;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Persoon rij */
+  .person-row {
+    display: grid;
+    grid-template-columns: 44px 1fr auto auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  .person-row:hover { background: var(--lcd-light); }
+  .person-row.deceased { opacity: 0.55; }
+  .person-row.deceased .p-name { text-decoration: line-through; text-decoration-color: var(--muted); }
+
+  .day-num {
+    font-family: 'VT323', monospace;
+    font-size: 32px;
+    color: var(--accent);
+    text-align: right;
+    line-height: 1;
+  }
+
+  .p-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--pixel);
+    letter-spacing: 0.5px;
+  }
+
+  .p-meta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+    letter-spacing: 0.5px;
+  }
+
+  .today-tag {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: var(--lcd-mid);
+    letter-spacing: 1px;
+    animation: blink 1s steps(1) infinite;
+  }
+
+  .photo-thumb {
+    width: 32px; height: 32px;
+    border-radius: 0;
+    object-fit: cover;
+    border: 2px solid var(--pixel);
+  }
+
+  .photo-placeholder {
+    width: 32px; height: 32px;
+    border: 2px dashed var(--border);
+    background: var(--lcd-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--muted); cursor: pointer;
+    font-family: 'VT323', monospace;
+  }
+
+  .photo-placeholder:hover { border-color: var(--pixel); }
+
+  .icon-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 14px;
+    font-family: 'Share Tech Mono', monospace;
+    padding: 3px 5px; transition: color 0.1s;
+  }
+
+  .icon-btn:hover { color: var(--pixel); }
+  .icon-btn.del:hover { color: var(--error); }
+
+  .empty-msg {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    padding: 40px;
+    letter-spacing: 1px;
+    border: 1px dashed var(--border);
+  }
+
+  @media (max-width: 600px) {
+    .header-top { padding: 8px 16px; flex-wrap: wrap; }
+    .main { padding: 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .person-row { grid-template-columns: 40px 1fr auto auto; }
+    .person-row > *:nth-child(4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ AUTH ══════════════════ -->
+<div class="auth-wrap" id="authWrap">
+  <div class="auth-device">
+    <div class="palm-shell">
+      <div class="palm-screen">
+
+        <div class="lang-bar">
+          <button class="lang-btn active" onclick="setLang('nl')" id="lbNL">NL</button>
+          <button class="lang-btn" onclick="setLang('en')" id="lbEN">EN</button>
+        </div>
+
+        <div class="screen-logo">
+          <svg width="100%" viewBox="0 0 380 175" xmlns="http://www.w3.org/2000/svg">
+            <!-- P -->
+            <rect x="18" y="18" width="6" height="28" rx="1" fill="#2a3818"/>
+            <rect x="24" y="18" width="12" height="6" rx="1" fill="#2a3818"/>
+            <rect x="24" y="32" width="12" height="6" rx="1" fill="#2a3818"/>
+            <rect x="36" y="18" width="6" height="20" rx="1" fill="#2a3818"/>
+            <!-- O -->
+            <rect x="50" y="18" width="6" height="28" rx="1" fill="#2a3818"/>
+            <rect x="56" y="18" width="12" height="6" rx="1" fill="#2a3818"/>
+            <rect x="56" y="40" width="12" height="6" rx="1" fill="#2a3818"/>
+            <rect x="68" y="18" width="6" height="28" rx="1" fill="#2a3818"/>
+            <!-- O -->
+            <rect x="82" y="18" width="6" height="28" rx="1" fill="#2a3818"/>
+            <rect x="88" y="18" width="12" height="6" rx="1" fill="#2a3818"/>
+            <rect x="88" y="40" width="12" height="6" rx="1" fill="#2a3818"/>
+            <rect x="100" y="18" width="6" height="28" rx="1" fill="#2a3818"/>
+            <!-- C -->
+            <rect x="248" y="18" width="6" height="28" rx="1" fill="#2a3818"/>
+            <rect x="254" y="18" width="14" height="6" rx="1" fill="#2a3818"/>
+            <rect x="254" y="40" width="14" height="6" rx="1" fill="#2a3818"/>
+            <!-- A -->
+            <rect x="276" y="24" width="6" height="22" rx="1" fill="#2a3818"/>
+            <rect x="282" y="18" width="6" height="6"  rx="1" fill="#2a3818"/>
+            <rect x="282" y="32" width="6" height="6"  rx="1" fill="#2a3818"/>
+            <rect x="288" y="24" width="6" height="22" rx="1" fill="#2a3818"/>
+            <!-- L -->
+            <rect x="302" y="18" width="6" height="28" rx="1" fill="#2a3818"/>
+            <rect x="308" y="40" width="14" height="6" rx="1" fill="#2a3818"/>
+
+            <!-- Scheidingslijn -->
+            <line x1="10" y1="60" x2="370" y2="60" stroke="#7a9040" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+            <!-- Poop icoon gecentreerd -->
+            <rect x="167" y="128" width="46" height="9"  rx="1" fill="#2a3818"/>
+            <rect x="171" y="119" width="38" height="11" rx="1" fill="#2a3818"/>
+            <rect x="175" y="110" width="30" height="11" rx="1" fill="#2a3818"/>
+            <rect x="180" y="101" width="20" height="11" rx="1" fill="#2a3818"/>
+            <rect x="184" y="91"  width="12" height="12" rx="6" fill="#2a3818"/>
+            <rect x="186" y="82"  width="8"  height="11" rx="4" fill="#2a3818"/>
+            <!-- Oogjes -->
+            <rect x="177" y="113" width="5" height="5" rx="1" fill="#c8d098"/>
+            <rect x="198" y="113" width="5" height="5" rx="1" fill="#c8d098"/>
+            <rect x="179" y="115" width="3" height="3" rx="1" fill="#1a2810"/>
+            <rect x="200" y="115" width="3" height="3" rx="1" fill="#1a2810"/>
+            <!-- Mondje -->
+            <rect x="181" y="123" width="3" height="2" rx="1" fill="#c8d098"/>
+            <rect x="184" y="125" width="12" height="2" rx="1" fill="#c8d098"/>
+            <rect x="196" y="123" width="3" height="2" rx="1" fill="#c8d098"/>
+            <!-- Geurwolkjes -->
+            <rect x="187" y="73" width="3" height="3" fill="#5a7a3a" opacity="0.7"/>
+            <rect x="192" y="68" width="3" height="3" fill="#5a7a3a" opacity="0.5"/>
+            <rect x="198" y="65" width="3" height="3" fill="#5a7a3a" opacity="0.6"/>
+            <rect x="204" y="70" width="3" height="3" fill="#5a7a3a" opacity="0.4"/>
+
+            <!-- Tagline -->
+            <text x="190" y="158" text-anchor="middle"
+                  font-family="'Share Tech Mono', monospace"
+                  font-size="8" fill="#5a7a3a" letter-spacing="3"
+                  id="logoSub">THE ORIGINAL THRONE CALENDAR</text>
+          </svg>
+        </div>
+
+        <div class="screen-tabs">
+          <button class="screen-tab active" id="tabLogin" onclick="switchTab('login')" data-nl="INLOGGEN" data-en="LOGIN">INLOGGEN</button>
+          <button class="screen-tab" id="tabReg" onclick="switchTab('register')" data-nl="NIEUW ACCOUNT" data-en="REGISTER">NIEUW ACCOUNT</button>
+        </div>
+
+        <div id="loginForm">
+          <label class="lcd-label" id="lEmail" data-nl="E-MAILADRES" data-en="EMAIL ADDRESS">E-MAILADRES</label>
+          <input class="lcd-input" type="email" id="login-email" placeholder="user@example.com" onkeydown="if(event.key==='Enter')doLogin()">
+          <label class="lcd-label" id="lPass" data-nl="WACHTWOORD" data-en="PASSWORD">WACHTWOORD</label>
+          <input class="lcd-input" type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+          <button class="pixel-btn" onclick="doLogin()" id="loginBtn" data-nl=">> INLOGGEN" data-en=">> LOGIN">>> INLOGGEN</button>
+        </div>
+
+        <div id="registerForm" style="display:none">
+          <label class="lcd-label" id="rEmail" data-nl="E-MAILADRES" data-en="EMAIL ADDRESS">E-MAILADRES</label>
+          <input class="lcd-input" type="email" id="reg-email" placeholder="user@example.com">
+          <label class="lcd-label" id="rPass" data-nl="WACHTWOORD (MIN. 6)" data-en="PASSWORD (MIN. 6)">WACHTWOORD (MIN. 6)</label>
+          <input class="lcd-input" type="password" id="reg-pass" placeholder="••••••••">
+          <button class="pixel-btn" onclick="doRegister()" id="regBtn" data-nl=">> ACCOUNT AANMAKEN" data-en=">> CREATE ACCOUNT">>> ACCOUNT AANMAKEN</button>
+        </div>
+
+        <div id="authMsg"></div>
+      </div>
+
+      <div class="palm-buttons">
+        <div class="palm-btn"></div>
+        <div class="palm-btn"></div>
+        <div class="palm-btn"></div>
+        <div class="palm-btn"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ APP ══════════════════ -->
+<div id="app">
+  <div class="app-header">
+    <div class="header-top">
+      <div class="header-logo">POOCAL <span id="appPoopIcon">💩</span></div>
+      <div class="header-lang">
+        <button class="lang-btn active" onclick="setLang('nl')" id="appLbNL">NL</button>
+        <button class="lang-btn" onclick="setLang('en')" id="appLbEN">EN</button>
+      </div>
+      <div class="header-actions">
+        <button class="h-btn h-btn-primary" onclick="toggleForm()" id="btnAdd" data-nl="+ TOEVOEGEN" data-en="+ ADD">+ TOEVOEGEN</button>
+        <button class="h-btn" onclick="doLogout()" id="btnLogout" data-nl="UITLOGGEN" data-en="LOGOUT">UITLOGGEN</button>
+      </div>
+      <div class="user-tag" id="userPill">—</div>
+    </div>
+    <div class="id-strip">
+      <span id="idLabel" data-nl="ESP32 ID:" data-en="ESP32 ID:">ESP32 ID:</span>
+      <strong id="userId">—</strong>
+      <button class="copy-btn" onclick="copyId()" id="btnCopy" data-nl="KOPIEER" data-en="COPY">KOPIEER</button>
+    </div>
+  </div>
+
+  <main class="main">
+
+    <div class="add-form" id="addForm">
+      <div class="form-title" id="formTitle" data-nl="// NIEUWE PERSOON" data-en="// NEW PERSON">// NIEUWE PERSOON</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="lcd-label" id="fNaamLbl" data-nl="NAAM" data-en="NAME">NAAM</label>
+          <input class="lcd-input" type="text" id="f-naam" style="margin-bottom:0">
+        </div>
+        <div class="form-group">
+          <label class="lcd-label" id="fDatumLbl" data-nl="DATUM (DD-MM)" data-en="DATE (DD-MM)">DATUM (DD-MM)</label>
+          <input class="lcd-input" type="text" id="f-datum" placeholder="14-03" maxlength="5" style="margin-bottom:0">
+        </div>
+        <div class="form-group">
+          <label class="lcd-label" id="fJaarLbl" data-nl="GEBOORTEJAAR (OPT.)" data-en="BIRTH YEAR (OPT.)">GEBOORTEJAAR (OPT.)</label>
+          <input class="lcd-input" type="text" id="f-jaar" placeholder="1975" style="margin-bottom:0">
+        </div>
+        <div class="form-group">
+          <label class="lcd-label" id="fRelLbl" data-nl="RELATIE (OPT.)" data-en="RELATION (OPT.)">RELATIE (OPT.)</label>
+          <input class="lcd-input" type="text" id="f-relatie" style="margin-bottom:0">
+        </div>
+        <div class="form-group full">
+          <label class="lcd-label" id="fFotoLbl" data-nl="FOTO (OPT.)" data-en="PHOTO (OPT.)">FOTO (OPT.)</label>
+          <input type="file" id="f-foto" accept="image/*" onchange="previewFoto(this)" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--pixel)">
+          <img id="foto-preview" src="" alt="" style="display:none;max-width:60px;margin-top:8px;border:2px solid var(--pixel)">
+        </div>
+        <div class="form-group full">
+          <div class="check-row">
+            <input type="checkbox" id="f-overleden">
+            <label for="f-overleden" id="fOverledenLbl" data-nl="OVERLEDEN — toon ✝ op het scherm" data-en="DECEASED — show ✝ on screen">OVERLEDEN — toon ✝ op het scherm</label>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="pix-btn-sm ghost" onclick="toggleForm()" id="btnCancel" data-nl="ANNULEREN" data-en="CANCEL">ANNULEREN</button>
+        <button class="pix-btn-sm" onclick="voegToe()" id="saveBtn" data-nl="OPSLAAN" data-en="SAVE">OPSLAAN</button>
+      </div>
+      <div id="formMsg"></div>
+    </div>
+
+    <div id="lijst"></div>
+  </main>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ttumrzkjudztyawbvpyo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_uWfqepDX6YaRSGCftI8vcQ_hBjaj9g8';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── TAAL ──────────────────────────────────────────────────
+let LANG = localStorage.getItem('poocal_lang') || 'nl';
+
+const T = {
+  nl: {
+    months: ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'],
+    today: '● VANDAAG',
+    bdays: 'verjaardag', bdaysPlural: 'verjaardagen',
+    empty: '// GEEN VERJAARDAGEN GEVONDEN //',
+    emptyAdd: '// VOEG IEMAND TOE VIA DE KNOP HIERBOVEN //',
+    logoSub: 'DE ORIGINELE TROON KALENDER',
+    graffiti: '// GRAFFITI INVOERGEBIED //',
+    errFill: 'Vul naam en datum in.',
+    errDate: 'Datum in formaat DD-MM, bijv. 14-03.',
+    errInvalid: 'Ongeldige datum.',
+    errLogin: 'Verkeerd e-mail of wachtwoord.',
+    errGeneral: 'Er ging iets mis.',
+    successReg: 'Gelukt! Bevestig je e-mail, dan kun je inloggen.',
+    deceased: 'MARKEER LEVEND',
+    alive: 'MARKEER OVERLEDEN',
+    confirmDelete: 'Verwijder deze persoon?',
+    copied: 'GEKOPIEERD!',
+    copy: 'KOPIEER',
+    saving: 'OPSLAAN...',
+    logging: 'BEZIG...',
+  },
+  en: {
+    months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+    today: '● TODAY',
+    bdays: 'birthday', bdaysPlural: 'birthdays',
+    empty: '// NO BIRTHDAYS FOUND //',
+    emptyAdd: '// ADD SOMEONE USING THE BUTTON ABOVE //',
+    logoSub: 'THE ORIGINAL THRONE CALENDAR',
+    graffiti: '// GRAFFITI INPUT AREA //',
+    errFill: 'Enter name and date.',
+    errDate: 'Date must be DD-MM, e.g. 14-03.',
+    errInvalid: 'Invalid date.',
+    errLogin: 'Incorrect email or password.',
+    errGeneral: 'Something went wrong.',
+    successReg: 'Done! Confirm your email, then log in.',
+    deceased: 'MARK AS ALIVE',
+    alive: 'MARK AS DECEASED',
+    confirmDelete: 'Delete this person?',
+    copied: 'COPIED!',
+    copy: 'COPY',
+    saving: 'SAVING...',
+    logging: 'LOADING...',
+  }
+};
+
+function t(key) { return T[LANG][key] || key; }
+
+function setLang(lang) {
+  LANG = lang;
+  localStorage.setItem('poocal_lang', lang);
+  // Taalknopjes
+  ['lbNL','appLbNL'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.toggle('active', lang==='nl'); });
+  ['lbEN','appLbEN'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.toggle('active', lang==='en'); });
+  // data-nl / data-en elementen
+  document.querySelectorAll('[data-nl]').forEach(el => {
+    const val = el.getAttribute('data-' + lang);
+    if (val) el.textContent = val;
+  });
+  // Speciale teksten
+  document.querySelectorAll('#logoSub').forEach(el => el.textContent = t('logoSub'));
+  const st = document.getElementById('stylusText');
+  if (st) st.textContent = t('graffiti');
+  // Herrender lijst als die er is
+  if (cachedData) renderLijst(cachedData);
+}
+
+// ── AUTH ──────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabReg').classList.toggle('active', tab==='register');
+  document.getElementById('loginForm').style.display   = tab==='login'    ? '' : 'none';
+  document.getElementById('registerForm').style.display = tab==='register' ? '' : 'none';
+  document.getElementById('authMsg').innerHTML = '';
+}
+
+function authMsg(tekst, type='error') {
+  document.getElementById('authMsg').innerHTML = `<div class="lcd-msg ${type}">> ${tekst}</div>`;
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) return authMsg(t('errFill'));
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = '>> ' + t('logging');
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.disabled = false; btn.textContent = LANG==='nl' ? '>> INLOGGEN' : '>> LOGIN';
+  if (error) authMsg(error.message.includes('Invalid') ? t('errLogin') : error.message);
+}
+
+async function doRegister() {
+  const email = document.getElementById('reg-email').value.trim();
+  const pass  = document.getElementById('reg-pass').value;
+  if (!email || !pass) return authMsg(t('errFill'));
+  if (pass.length < 6) return authMsg(LANG==='nl' ? 'Wachtwoord min. 6 tekens.' : 'Password min. 6 characters.');
+  const btn = document.getElementById('regBtn');
+  btn.disabled = true; btn.textContent = '>> ' + t('logging');
+  const { error } = await sb.auth.signUp({ email, password: pass });
+  btn.disabled = false; btn.textContent = LANG==='nl' ? '>> ACCOUNT AANMAKEN' : '>> CREATE ACCOUNT';
+  if (error) authMsg(error.message);
+  else authMsg(t('successReg'), 'success');
+}
+
+async function doLogout() { await sb.auth.signOut(); }
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    document.getElementById('authWrap').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('userPill').textContent = session.user.email;
+    document.getElementById('userId').textContent = session.user.id;
+    laadVerjaardagen();
+  } else {
+    document.getElementById('authWrap').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    cachedData = null;
+  }
+});
+
+function copyId() {
+  navigator.clipboard.writeText(document.getElementById('userId').textContent).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = t('copied');
+    setTimeout(() => btn.textContent = t('copy'), 2000);
+  });
+}
+
+// ── DATA ──────────────────────────────────────────────────
+let cachedData = null;
+let huidigeFoto = null;
+
+async function laadVerjaardagen() {
+  const { data, error } = await sb.from('verjaardagen').select('*').order('maand').order('dag');
+  if (error) { console.error(error); return; }
+  cachedData = data || [];
+  renderLijst(cachedData);
+}
+
+function renderLijst(mensen) {
+  const nu = new Date();
+  const dm = nu.getMonth()+1, dd = nu.getDate(), dj = nu.getFullYear();
+  const maanden = t('months');
+  const perMaand = {};
+  mensen.forEach(p => { if (!perMaand[p.maand]) perMaand[p.maand]=[]; perMaand[p.maand].push(p); });
+
+  if (mensen.length === 0) {
+    document.getElementById('lijst').innerHTML = `<div class="empty-msg">${t('emptyAdd')}</div>`;
+    return;
+  }
+
+  let html = '';
+  Object.keys(perMaand).map(Number).sort((a,b)=>a-b).forEach(m => {
+    const isDezeM = m===dm;
+    const cnt = perMaand[m].length;
+    const cntStr = cnt===1 ? `1 ${t('bdays')}` : `${cnt} ${t('bdaysPlural')}`;
+    html += `<div class="month-section"><div class="month-header">
+      <span class="month-name">${maanden[m-1].toUpperCase()}${isDezeM?'<span class="this-month-dot"></span>':''}</span>
+      <span class="month-count">${cntStr}</span>
+    </div>`;
+
+    perMaand[m].forEach(p => {
+      const isVandaag = m===dm && p.dag===dd;
+      const leeftijd = p.jaar ? (dj - p.jaar - (m>dm||(m===dm&&p.dag>dd)?1:0)) : null;
+      const foto = p.foto_url
+        ? `<img class="photo-thumb" src="${p.foto_url}" alt="">`
+        : `<div class="photo-placeholder" onclick="uploadFotoBestaand('${p.id}')" title="+">+</div>`;
+      const metaParts = [p.relatie, leeftijd!==null ? leeftijd+(LANG==='nl'?' jr':' yr') : null].filter(Boolean);
+      const meta = metaParts.join(' // ');
+
+      html += `<div class="person-row${p.overleden?' deceased':''}">
+        <span class="day-num">${String(p.dag).padStart(2,'0')}</span>
+        <div>
+          <div class="p-name">${p.overleden?'✝ ':''}${p.naam}${isVandaag?` <span class="today-tag">${t('today')}</span>`:''}</div>
+          ${meta?`<div class="p-meta">${meta}</div>`:''}
+        </div>
+        ${foto}
+        <button class="icon-btn" onclick="toggleOverleden('${p.id}',${p.overleden})" title="${p.overleden?t('deceased'):t('alive')}">${p.overleden?'♺':'✝'}</button>
+        <button class="icon-btn del" onclick="verwijder('${p.id}')" title="X">✕</button>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('lijst').innerHTML = html;
+}
+
+// ── FORMULIER ─────────────────────────────────────────────
+function toggleForm() {
+  const f = document.getElementById('addForm');
+  if (f.classList.toggle('open')) document.getElementById('f-naam').focus();
+  else resetForm();
+}
+
+function resetForm() {
+  ['f-naam','f-datum','f-jaar','f-relatie'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('f-overleden').checked=false;
+  document.getElementById('f-foto').value='';
+  document.getElementById('foto-preview').style.display='none';
+  document.getElementById('formMsg').innerHTML='';
+  huidigeFoto=null;
+}
+
+function previewFoto(input) {
+  if (!input.files?.[0]) return;
+  huidigeFoto = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => { const img=document.getElementById('foto-preview'); img.src=e.target.result; img.style.display='block'; };
+  reader.readAsDataURL(huidigeFoto);
+}
+
+function formMsg(tekst, type='error') {
+  document.getElementById('formMsg').innerHTML = `<div class="lcd-msg ${type}" style="margin-top:8px">> ${tekst}</div>`;
+}
+
+async function voegToe() {
+  const naam  = document.getElementById('f-naam').value.trim();
+  const datum = document.getElementById('f-datum').value.trim();
+  const jaar  = parseInt(document.getElementById('f-jaar').value)||null;
+  const rel   = document.getElementById('f-relatie').value.trim();
+  const overl = document.getElementById('f-overleden').checked;
+
+  if (!naam||!datum) return formMsg(t('errFill'));
+  if (!/^\d{2}-\d{2}$/.test(datum)) return formMsg(t('errDate'));
+  const dag=parseInt(datum.substring(0,2)), maand=parseInt(datum.substring(3,5));
+  if (dag<1||dag>31||maand<1||maand>12) return formMsg(t('errInvalid'));
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled=true; btn.textContent=t('saving');
+
+  const { data: { user } } = await sb.auth.getUser();
+  let fotoUrl=null;
+  if (huidigeFoto) {
+    const ext=huidigeFoto.name.split('.').pop();
+    const pad=`${user.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from('fotos').upload(pad, huidigeFoto);
+    if (!upErr) { const { data: u } = sb.storage.from('fotos').getPublicUrl(pad); fotoUrl=u.publicUrl; }
+  }
+
+  const { error } = await sb.from('verjaardagen').insert({
+    user_id: user.id, naam, dag, maand, jaar, relatie: rel||null, overleden: overl, foto_url: fotoUrl
+  });
+
+  btn.disabled=false; btn.textContent=LANG==='nl'?'OPSLAAN':'SAVE';
+  if (error) return formMsg(t('errGeneral')+': '+error.message);
+  toggleForm(); laadVerjaardagen();
+}
+
+async function verwijder(id) {
+  if (!confirm(t('confirmDelete'))) return;
+  await sb.from('verjaardagen').delete().eq('id',id);
+  laadVerjaardagen();
+}
+
+async function toggleOverleden(id, was) {
+  await sb.from('verjaardagen').update({ overleden: !was }).eq('id',id);
+  laadVerjaardagen();
+}
+
+async function uploadFotoBestaand(id) {
+  const input=document.createElement('input'); input.type='file'; input.accept='image/*';
+  input.onchange=async e => {
+    const file=e.target.files[0]; if(!file) return;
+    const { data: { user } } = await sb.auth.getUser();
+    const pad=`${user.id}/${Date.now()}.${file.name.split('.').pop()}`;
+    const { error } = await sb.storage.from('fotos').upload(pad,file); if(error) return;
+    const { data: u } = sb.storage.from('fotos').getPublicUrl(pad);
+    await sb.from('verjaardagen').update({ foto_url: u.publicUrl }).eq('id',id);
+    laadVerjaardagen();
+  };
+  input.click();
+}
+
+// Init taal
+setLang(LANG);
+</script>
+</body>
+</html>
